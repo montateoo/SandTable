@@ -1,0 +1,36 @@
+<div class="sandtable-tab">
+    <h3>SandTable</h3>
+
+    <div class="alert" data-bind="visible: dryRun" style="display:none;">
+        <strong>{{ _('Dry-run is ON') }}</strong> &mdash; {{ _('the cycle runs but the machine will not actually power off or shut down. Disable dry-run in Settings to go live.') }}
+    </div>
+
+    <div class="sandtable-status well">
+        <div class="sandtable-state" data-bind="text: stateText"></div>
+        <table class="table table-condensed sandtable-kv">
+            <tr><th>{{ _('Current file') }}</th><td data-bind="text: currentFile() || '—'"></td></tr>
+            <tr><th>{{ _('Next eraser') }}</th><td data-bind="text: nextEraser() || '—'"></td></tr>
+            <tr><th>{{ _('Next draw') }}</th><td data-bind="text: nextDraw() || '—'"></td></tr>
+            <tr><th>{{ _('Pool sizes') }}</th><td><span data-bind="text: eraserCount"></span> {{ _('erasers') }} / <span data-bind="text: drawCount"></span> {{ _('draws') }}</td></tr>
+        </table>
+        <div class="text-error" data-bind="visible: lastError(), text: lastError"></div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn btn-primary" data-bind="click: start, enable: !running()"><i class="fa fa-play"></i> {{ _('Start cycle') }}</button>
+        <button class="btn" data-bind="click: stop, enable: running()"><i class="fa fa-stop"></i> {{ _('Stop') }}</button>
+        <button class="btn" data-bind="click: skip, enable: running()"><i class="fa fa-step-forward"></i> {{ _('Skip current') }}</button>
+        <button class="btn" data-bind="click: refresh"><i class="fa fa-refresh"></i> {{ _('Refresh') }}</button>
+    </div>
+
+    <hr>
+    <h4>{{ _('Test & maintenance') }}</h4>
+    <p class="muted">{{ _('Plug tests switch the plug immediately and ignore dry-run — test against a lamp, not the Pi, the first time.') }}</p>
+    <div class="btn-group">
+        <button class="btn btn-success" data-bind="click: testOn"><i class="fa fa-bolt"></i> {{ _('Plug ON') }}</button>
+        <button class="btn btn-warning" data-bind="click: testOff"><i class="fa fa-power-off"></i> {{ _('Plug OFF') }}</button>
+        <button class="btn" data-bind="click: simulate"><i class="fa fa-flask"></i> {{ _('Simulate cycle-complete') }}</button>
+    </div>
+
+    <div class="sandtable-message text-info" data-bind="visible: message(), text: message" style="margin-top:10px;"></div>
+</div>

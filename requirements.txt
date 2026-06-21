@@ -1,0 +1,9 @@
+# Runtime: the plugin runs inside OctoPrint, which already provides `requests`,
+# the plugin framework and octoprint.util.RepeatedTimer.
+#
+# Optional driver dependency (only if you select the Kasa smart-plug driver):
+#   pip install "python-kasa>=0.5.0"
+#
+# Development / test only:
+pytest>=7.0
+requests>=2.25

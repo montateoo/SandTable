@@ -1,0 +1,122 @@
+<h3>SandTable Auto-Cycle</h3>
+<p class="muted">
+    Runs ERASER &rarr; DRAW rounds, then cuts power via a local smart plug. An external
+    schedule (plug timer / Google Home / Matter routine) powers it back on and the plugin
+    resumes automatically on boot.
+</p>
+
+<form class="form-horizontal">
+
+    <div class="control-group">
+        <label class="control-label">{{ _('Enabled') }}</label>
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.plugins.sandtable.enabled">
+                {{ _('Master switch for the auto-cycle') }}
+            </label>
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.plugins.sandtable.autostart_on_boot">
+                {{ _('Auto-start the cycle when OctoPrint boots') }}
+            </label>
+        </div>
+    </div>
+
+    <hr>
+    <h4>{{ _('Pattern pools') }}</h4>
+
+    <div class="control-group">
+        <label class="control-label">{{ _('Eraser folder') }}</label>
+        <div class="controls">
+            <input type="text" class="input-block-level" data-bind="value: settings.plugins.sandtable.eraser_folder">
+            <span class="help-block">{{ _('OctoPrint upload folder holding eraser G-code. Round-robin picks one each round.') }}</span>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label">{{ _('Draw folder') }}</label>
+        <div class="controls">
+            <input type="text" class="input-block-level" data-bind="value: settings.plugins.sandtable.draw_folder">
+            <span class="help-block">{{ _('OctoPrint upload folder holding drawing G-code.') }}</span>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label">{{ _('Rounds per cycle') }}</label>
+        <div class="controls">
+            <input type="number" min="1" class="input-mini" data-bind="value: settings.plugins.sandtable.rounds">
+            <span class="help-block">{{ _('How many ERASER&rarr;DRAW rounds run before powering off (your example used 2).') }}</span>
+        </div>
+    </div>
+
+    <hr>
+    <h4>{{ _('Smart plug (local LAN)') }}</h4>
+
+    <div class="control-group">
+        <label class="control-label">{{ _('Plug type') }}</label>
+        <div class="controls">
+            <select data-bind="value: settings.plugins.sandtable.plug_type">
+                <option value="shelly1">Shelly Gen1</option>
+                <option value="shelly2">Shelly Gen2 / Gen3 / Gen4 / Plus</option>
+                <option value="tasmota">Tasmota</option>
+                <option value="kasa">TP-Link Kasa</option>
+            </select>
+            <span class="help-block">{{ _('Shelly/Tasmota support a safe delayed power-off; Kasa does not (see README).') }}</span>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label">{{ _('Plug host / IP') }}</label>
+        <div class="controls">
+            <input type="text" class="input-block-level" placeholder="192.168.1.50" data-bind="value: settings.plugins.sandtable.plug_host">
+        </div>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label">{{ _('Plug user / password') }}</label>
+        <div class="controls">
+            <input type="text" class="input-medium" placeholder="{{ _('user (optional)') }}" data-bind="value: settings.plugins.sandtable.plug_user">
+            <input type="password" class="input-medium" placeholder="{{ _('password (optional)') }}" data-bind="value: settings.plugins.sandtable.plug_password">
+        </div>
+    </div>
+
+    <hr>
+    <h4>{{ _('Power-off & shutdown') }}</h4>
+
+    <div class="control-group">
+        <label class="control-label">{{ _('Dry run') }}</label>
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.plugins.sandtable.dry_run">
+                <strong>{{ _('Never actually power off or shut down (log only)') }}</strong>
+            </label>
+            <span class="help-block">{{ _('Leave this ON until you have tested everything. Turn it OFF to go live.') }}</span>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label">{{ _('Power-off delay (s)') }}</label>
+        <div class="controls">
+            <input type="number" min="0" class="input-mini" data-bind="value: settings.plugins.sandtable.off_delay_seconds">
+            <span class="help-block">{{ _('Plug stays on this long after the cycle, so the Pi can halt cleanly before power is cut.') }}</span>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label">{{ _('Shut down the Pi') }}</label>
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.plugins.sandtable.shutdown_pi">
+                {{ _('Issue a clean OS shutdown before the plug cuts power') }}
+            </label>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label">{{ _('Startup delay (s)') }}</label>
+        <div class="controls">
+            <input type="number" min="0" class="input-mini" data-bind="value: settings.plugins.sandtable.startup_delay_seconds">
+            <span class="help-block">{{ _('Wait this long after the printer is connected before auto-starting on boot.') }}</span>
+        </div>
+    </div>
+
+</form>
