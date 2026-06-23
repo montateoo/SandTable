@@ -33,7 +33,8 @@ def advance(completed_phase, round_index, rounds):
 
     if completed_phase == PHASE_DRAW:
         next_round = round_index + 1
-        if next_round < rounds:
+        # rounds <= 0 means "unlimited" — keep going until explicitly stopped.
+        if rounds <= 0 or next_round < rounds:
             return (ACTION_PRINT_ERASER, PHASE_ERASER, next_round)
         return (ACTION_COMPLETE, None, next_round)
 
