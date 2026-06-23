@@ -17,6 +17,15 @@ venv/
 # Generated pattern-gallery previews
 tools/_*.png
 
+# Local pattern library — lives on the Pi (OctoPrint uploads), not part of the plugin
+draw/
+
+# IDE / Java build artifacts (from bundled pattern projects)
+.idea/
+out/
+*.class
+*.iml
+
 # Secrets — NEVER commit (this repo is public!)
 secrets.toml
 .env
