@@ -13,3 +13,11 @@ venv/
 # Test / tooling
 .pytest_cache/
 .coverage
+
+# Generated pattern-gallery previews
+tools/_*.png
+
+# Secrets — NEVER commit (this repo is public!)
+secrets.toml
+.env
+*.secret

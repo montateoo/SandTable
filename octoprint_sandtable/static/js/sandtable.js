@@ -94,6 +94,6 @@ $(function () {
     OCTOPRINT_VIEWMODELS.push({
         construct: SandtableViewModel,
         dependencies: ["settingsViewModel", "loginStateViewModel"],
-        elements: ["#tab_plugin_sandtable", "#settings_plugin_sandtable"]
+        elements: ["#tab_plugin_sandtable"]
     });
 });

@@ -80,7 +80,10 @@ class SandTablePlugin(
     # -------------------------------------------------------------- templates
     def get_template_configs(self):
         return [
-            {"type": "settings", "name": "SandTable", "custom_bindings": True},
+            # Settings panel: let OctoPrint bind it (so `settings.plugins.sandtable.X`
+            # in the template resolves correctly). Do NOT attach our custom view model
+            # to it, or the binding context changes and the fields won't populate.
+            {"type": "settings", "name": "SandTable", "custom_bindings": False},
             {"type": "tab", "name": "SandTable", "custom_bindings": True},
         ]
 
@@ -100,11 +103,17 @@ class SandTablePlugin(
             self._run_bg(self._handle_print_stop, event, payload)
 
     # ------------------------------------------------------------- public ops
-    def start_cycle(self):
+    def start_cycle(self, rounds_override=None):
         with self._lock:
             if self._running:
                 return False, "Cycle already running"
-            self._rounds = max(1, self._settings.get_int(["rounds"]) or 1)
+            if rounds_override is not None:
+                try:
+                    self._rounds = max(1, int(rounds_override))
+                except (TypeError, ValueError):
+                    self._rounds = max(1, self._settings.get_int(["rounds"]) or 1)
+            else:
+                self._rounds = max(1, self._settings.get_int(["rounds"]) or 1)
             self._round = 0
             self._phase = None
             self._current_path = None
@@ -364,7 +373,8 @@ class SandTablePlugin(
         import flask
 
         if command == "start":
-            ok, msg = self.start_cycle()
+            rounds = data.get("rounds") if data else None
+            ok, msg = self.start_cycle(rounds_override=rounds)
             return flask.jsonify(ok=ok, message=msg, status=self._status())
         if command == "stop":
             self.stop_cycle()
