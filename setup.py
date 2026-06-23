@@ -5,7 +5,7 @@
 plugin_identifier = "sandtable"
 plugin_package = "octoprint_sandtable"
 plugin_name = "OctoPrint-SandTable"
-plugin_version = "0.1.1"
+plugin_version = "0.1.2"
 plugin_description = (
     "Turns a Sisyphus-style sand table into an autonomous appliance: runs N rounds of "
     "ERASER -> DRAW (round-robin from two folders), then cuts power via a local smart plug. "

@@ -109,7 +109,8 @@ class SandTablePlugin(
                 return False, "Cycle already running"
             if rounds_override is not None:
                 try:
-                    self._rounds = max(1, int(rounds_override))
+                    r = int(rounds_override)
+                    self._rounds = 0 if r <= 0 else max(1, r)  # 0 = unlimited (until stopped)
                 except (TypeError, ValueError):
                     self._rounds = max(1, self._settings.get_int(["rounds"]) or 1)
             else:
@@ -208,9 +209,10 @@ class SandTablePlugin(
         if not self._wait_ready():
             raise CycleError("Printer was not ready to start the next print")
         self._current_path = path
+        rounds_label = "unlimited" if self._rounds <= 0 else str(self._rounds)
         self._logger.info(
-            "SandTable: printing %s (%s, round %d/%d)",
-            path, self._phase, self._round + 1, self._rounds,
+            "SandTable: printing %s (%s, round %d/%s)",
+            path, self._phase, self._round + 1, rounds_label,
         )
         self._printer.select_file(path, False, printAfterSelect=True)
 

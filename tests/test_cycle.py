@@ -23,6 +23,13 @@ def test_advance_single_round_completes_immediately():
     assert cycle.advance(cycle.PHASE_DRAW, 0, 1) == (cycle.ACTION_COMPLETE, None, 1)
 
 
+def test_advance_unlimited_never_completes():
+    # rounds <= 0 means unlimited: a finished draw always starts another eraser
+    assert cycle.advance(cycle.PHASE_DRAW, 0, 0) == (cycle.ACTION_PRINT_ERASER, cycle.PHASE_ERASER, 1)
+    assert cycle.advance(cycle.PHASE_DRAW, 999, 0) == (cycle.ACTION_PRINT_ERASER, cycle.PHASE_ERASER, 1000)
+    assert cycle.advance(cycle.PHASE_ERASER, 999, 0) == (cycle.ACTION_PRINT_DRAW, cycle.PHASE_DRAW, 999)
+
+
 def test_advance_rejects_unknown_phase():
     with pytest.raises(ValueError):
         cycle.advance("bogus", 0, 2)
