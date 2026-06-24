@@ -1,0 +1,196 @@
+<form class="form-horizontal">
+    <div class="control-group">
+        <label class="control-label">{{ _('Enabled') }}</label>
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.settings.plugins.f1sisyphus.enabled">
+                {{ _('Master switch — the Shelly-triggered "start" command is ignored while off') }}
+            </label>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Dry run') }}</label>
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.settings.plugins.f1sisyphus.dry_run">
+                <strong>{{ _('Never actually push a Shelly schedule, power off, or shut down (log only)') }}</strong>
+            </label>
+            <span class="help-block">{{ _('Leave this ON until you have tested everything. Turn it OFF to go live.') }}</span>
+        </div>
+    </div>
+
+    <hr>
+    <h5>{{ _('OpenF1') }}</h5>
+    <div class="control-group">
+        <label class="control-label">{{ _('OpenF1 driver number') }}</label>
+        <div class="controls">
+            <input type="number" class="input-small" data-bind="value: settings.settings.plugins.f1sisyphus.driver_number">
+            <span class="help-block">{{ _('e.g. 1 = Verstappen, 44 = Hamilton, 16 = Leclerc. Full list at api.openf1.org/v1/drivers') }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Session key') }}</label>
+        <div class="controls">
+            <input type="text" class="input-small" data-bind="value: settings.settings.plugins.f1sisyphus.session_key">
+            <span class="help-block">{{ _("Leave as 'latest' to follow whatever session is live. Set to a specific past session_key to replay-test outside a race weekend.") }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Circuit key override') }}</label>
+        <div class="controls">
+            <input type="number" class="input-small" data-bind="value: settings.settings.plugins.f1sisyphus.circuit_key_override">
+            <span class="help-block">{{ _("Leave blank to use the upcoming race's own circuit. Set for replay-testing a specific past circuit (e.g. 19 = Austria).") }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Force live (testing)') }}</label>
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.settings.plugins.f1sisyphus.force_live_for_testing">
+                {{ _('Skip the wait-for-live poll and start tracking immediately — for replaying a past session') }}
+            </label>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Wait-for-live poll interval (s)') }}</label>
+        <div class="controls">
+            <input type="number" class="input-mini" data-bind="value: settings.settings.plugins.f1sisyphus.wait_for_live_poll_interval">
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Live tracking poll interval (s)') }}</label>
+        <div class="controls">
+            <input type="number" class="input-mini" data-bind="value: settings.settings.plugins.f1sisyphus.live_poll_interval">
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('No-data timeout (s)') }}</label>
+        <div class="controls">
+            <input type="number" class="input-mini" data-bind="value: settings.settings.plugins.f1sisyphus.no_data_timeout_seconds">
+            <span class="help-block">{{ _('If no new position data arrives for this long while tracking, treat the race as ended.') }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Race duration safety cap (min)') }}</label>
+        <div class="controls">
+            <input type="number" class="input-mini" data-bind="value: settings.settings.plugins.f1sisyphus.race_duration_safety_cap_minutes">
+            <span class="help-block">{{ _('Backstop: tracking always ends after this long, even if data keeps arriving.') }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Lead time before race (min)') }}</label>
+        <div class="controls">
+            <input type="number" class="input-mini" data-bind="value: settings.settings.plugins.f1sisyphus.lead_minutes">
+            <span class="help-block">{{ _('How long before the race start the Shelly schedule wakes the table.') }}</span>
+        </div>
+    </div>
+
+    <hr>
+    <h5>{{ _('Circuit outline') }}</h5>
+    <div class="control-group">
+        <label class="control-label">{{ _('Circuits folder') }}</label>
+        <div class="controls">
+            <input type="text" class="input-block-level" data-bind="value: settings.settings.plugins.f1sisyphus.circuits_folder">
+            <span class="help-block">{{ _('OctoPrint local-storage folder used to cache generated circuit-outline G-code, one file per circuit_key.') }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Circuit feedrate (mm/min)') }}</label>
+        <div class="controls">
+            <input type="number" class="input-small" data-bind="value: settings.settings.plugins.f1sisyphus.circuit_feedrate">
+        </div>
+    </div>
+
+    <hr>
+    <h5>{{ _('Live tracking') }}</h5>
+    <div class="control-group">
+        <label class="control-label">{{ _('Feedrate (mm/min)') }}</label>
+        <div class="controls">
+            <input type="number" class="input-small" data-bind="value: settings.settings.plugins.f1sisyphus.feedrate">
+        </div>
+    </div>
+
+    <hr>
+    <h5>{{ _('Table working area (mm) - must match what your firmware actually accepts') }}</h5>
+    <div class="control-group">
+        <label class="control-label">{{ _('X range') }}</label>
+        <div class="controls">
+            <input type="number" class="input-mini" data-bind="value: settings.settings.plugins.f1sisyphus.table_min_x">
+            &ndash;
+            <input type="number" class="input-mini" data-bind="value: settings.settings.plugins.f1sisyphus.table_max_x">
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Y range') }}</label>
+        <div class="controls">
+            <input type="number" class="input-mini" data-bind="value: settings.settings.plugins.f1sisyphus.table_min_y">
+            &ndash;
+            <input type="number" class="input-mini" data-bind="value: settings.settings.plugins.f1sisyphus.table_max_y">
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Margin (mm)') }}</label>
+        <div class="controls">
+            <input type="number" class="input-mini" data-bind="value: settings.settings.plugins.f1sisyphus.margin">
+            <span class="help-block">{{ _('Empty space kept around the mapped track shape.') }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.settings.plugins.f1sisyphus.flip_x"> {{ _('Flip X') }}
+            </label>
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.settings.plugins.f1sisyphus.flip_y"> {{ _('Flip Y') }}
+            </label>
+        </div>
+    </div>
+
+    <hr>
+    <h5>{{ _('Power-off & shutdown') }}</h5>
+    <div class="control-group">
+        <label class="control-label">{{ _('Power-off delay (s)') }}</label>
+        <div class="controls">
+            <input type="number" min="0" class="input-mini" data-bind="value: settings.settings.plugins.f1sisyphus.off_delay_seconds">
+            <span class="help-block">{{ _('Plug stays on this long after the race ends, so the Pi can halt cleanly before power is cut.') }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Shut down the Pi') }}</label>
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.settings.plugins.f1sisyphus.shutdown_pi">
+                {{ _('Issue a clean OS shutdown before the plug cuts power') }}
+            </label>
+        </div>
+    </div>
+
+    <hr>
+    <h5>{{ _('Shelly (shared smart plug — also used by SandTable)') }}</h5>
+    <div class="control-group">
+        <label class="control-label">{{ _('Shelly host / IP') }}</label>
+        <div class="controls">
+            <input type="text" class="input-block-level" placeholder="192.168.1.55" data-bind="value: settings.settings.plugins.f1sisyphus.shelly_host">
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Shelly password') }}</label>
+        <div class="controls">
+            <input type="password" class="input-medium" placeholder="{{ _('optional') }}" data-bind="value: settings.settings.plugins.f1sisyphus.shelly_password">
+            <span class="help-block">{{ _('Digest auth as user "admin", only sent if a password is set.') }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Switch id') }}</label>
+        <div class="controls">
+            <input type="number" class="input-mini" data-bind="value: settings.settings.plugins.f1sisyphus.shelly_switch_id">
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Wake script id') }}</label>
+        <div class="controls">
+            <input type="number" class="input-mini" data-bind="value: settings.settings.plugins.f1sisyphus.shelly_script_id">
+            <span class="help-block">{{ _('Id of the dedicated "f1sisyphus_waker" script deployed on the Shelly (separate from SandTable\'s own waker script).') }}</span>
+        </div>
+    </div>
+</form>
