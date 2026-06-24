@@ -1,0 +1,40 @@
+<div id="tab_plugin_f1sisyphus">
+    <h3>{{ _('F1 Sisyphus Tracker') }}</h3>
+    <p class="muted">{{ _('Draws the circuit outline, waits for the session to go live, then traces your driver\'s on-track position until the race ends — then powers off and reschedules itself for the next race.') }}</p>
+
+    <div class="alert" data-bind="visible: dryRun" style="display:none;">
+        <strong>{{ _('Dry-run is ON') }}</strong> &mdash; {{ _('the cycle runs but no Shelly schedule is pushed and the table will not actually power off or shut down. Disable dry-run in Settings to go live.') }}
+    </div>
+
+    <div class="f1sisyphus-status well">
+        <div class="f1sisyphus-state" data-bind="text: stateText"></div>
+        <table class="table table-condensed f1sisyphus-kv">
+            <tr><th>{{ _('Upcoming session') }}</th><td data-bind="text: upcomingLabel"></td></tr>
+            <tr><th>{{ _('Points drawn') }}</th><td data-bind="text: pointsDrawn"></td></tr>
+            <tr>
+                <th>{{ _('Last track position (x, y)') }}</th>
+                <td><span data-bind="text: lastTrackX"></span>, <span data-bind="text: lastTrackY"></span></td>
+            </tr>
+            <tr><th>{{ _('Next scheduled wake') }}</th><td data-bind="text: nextRaceLabel"></td></tr>
+        </table>
+        <div class="text-error" data-bind="visible: lastError(), text: lastError"></div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn btn-primary" data-bind="click: start, enable: !running()"><i class="fa fa-play"></i> {{ _('Start race cycle') }}</button>
+        <button class="btn" data-bind="click: stop, enable: running()"><i class="fa fa-stop"></i> {{ _('Stop') }}</button>
+        <button class="btn" data-bind="click: refresh"><i class="fa fa-refresh"></i> {{ _('Refresh') }}</button>
+    </div>
+
+    <hr>
+    <h4>{{ _('Test & maintenance') }}</h4>
+    <p class="muted">{{ _('Plug tests switch the plug immediately and ignore dry-run — test against a lamp, not the Pi, the first time.') }}</p>
+    <div class="btn-group">
+        <button class="btn btn-success" data-bind="click: testOn"><i class="fa fa-bolt"></i> {{ _('Plug ON') }}</button>
+        <button class="btn btn-warning" data-bind="click: testOff"><i class="fa fa-power-off"></i> {{ _('Plug OFF') }}</button>
+        <button class="btn" data-bind="click: simulateComplete"><i class="fa fa-flask"></i> {{ _('Simulate race-complete') }}</button>
+        <button class="btn" data-bind="click: rescheduleNow"><i class="fa fa-calendar"></i> {{ _('Reschedule now') }}</button>
+    </div>
+
+    <div class="f1sisyphus-message text-info" data-bind="visible: message(), text: message" style="margin-top:10px;"></div>
+</div>

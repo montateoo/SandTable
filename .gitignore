@@ -26,6 +26,9 @@ out/
 *.class
 *.iml
 
+# Generated plugin-upload archives (rebuild from source, don't commit)
+*.zip
+
 # Secrets — NEVER commit (this repo is public!)
 secrets.toml
 .env
