@@ -1,0 +1,25 @@
+<div id="tab_plugin_nanoled">
+    <h3>{{ _('NanoLED') }}</h3>
+    <p class="muted">{{ _('Manual control of the under-table LED strip. Useful for testing the serial link, or just picking a pattern by hand.') }}</p>
+
+    <h4>{{ _('Patterns') }}</h4>
+    <div class="btn-group" data-bind="foreach: patterns">
+        <button class="btn" data-bind="click: function() { $root.setPattern($data); }, text: $data"></button>
+    </div>
+
+    <h4>{{ _('Solid colors') }}</h4>
+    <div class="btn-group">
+        <button class="btn btn-danger" data-bind="click: function() { setSolid('RED'); }">{{ _('Red') }}</button>
+        <button class="btn btn-warning" data-bind="click: function() { setSolid('YELLOW'); }">{{ _('Yellow') }}</button>
+        <button class="btn btn-success" data-bind="click: function() { setSolid('GREEN'); }">{{ _('Green') }}</button>
+        <button class="btn" data-bind="click: function() { setSolid('WHITE'); }">{{ _('White') }}</button>
+    </div>
+
+    <h4>{{ _('Effects') }}</h4>
+    <div class="btn-group">
+        <button class="btn" data-bind="click: flickerRainbow"><i class="fa fa-magic"></i> {{ _('Flicker rainbow') }}</button>
+        <button class="btn" data-bind="click: flashWhite"><i class="fa fa-bolt"></i> {{ _('Flash white') }}</button>
+    </div>
+
+    <div class="nanoled-message text-info" data-bind="visible: message(), text: message" style="margin-top:10px;"></div>
+</div>

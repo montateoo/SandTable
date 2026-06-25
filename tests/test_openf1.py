@@ -80,6 +80,20 @@ def test_get_location_omits_date_filter_when_not_given(fake_requests):
     assert "date>" not in params
 
 
+def test_get_race_control_includes_date_filter_when_given(fake_requests):
+    openf1.OpenF1Client().get_race_control(session_key=1234, date_gt="2026-06-24T12:00:00Z")
+    _, url, params = fake_requests.last
+    assert url.endswith("/race_control")
+    assert params["date>"] == "2026-06-24T12:00:00Z"
+
+
+def test_get_race_control_omits_date_filter_when_not_given(fake_requests):
+    openf1.OpenF1Client().get_race_control(session_key=1234)
+    _, _, params = fake_requests.last
+    assert "date>" not in params
+    assert params == {"session_key": 1234}
+
+
 def test_get_upcoming_race_picks_earliest_future_session(fake_requests):
     fake_requests.json_to_return = [
         _session(1, "2026-06-01T13:00:00Z"),  # past

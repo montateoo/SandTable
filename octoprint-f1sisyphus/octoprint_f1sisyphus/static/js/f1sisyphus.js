@@ -120,6 +120,6 @@ $(function () {
     OCTOPRINT_VIEWMODELS.push({
         construct: F1SisyphusViewModel,
         dependencies: ["settingsViewModel", "loginStateViewModel"],
-        elements: ["#tab_plugin_f1sisyphus"],
+        elements: ["#tab_plugin_f1sisyphus", "#settings_plugin_f1sisyphus"],
     });
 });

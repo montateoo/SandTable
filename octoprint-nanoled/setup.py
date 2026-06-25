@@ -1,18 +1,18 @@
 import setuptools
 
-plugin_identifier = "f1sisyphus"
-plugin_package = "octoprint_f1sisyphus"
-plugin_name = "OctoPrint-F1Sisyphus"
-plugin_version = "0.1.2"
+plugin_identifier = "nanoled"
+plugin_package = "octoprint_nanoled"
+plugin_name = "OctoPrint-NanoLED"
+plugin_version = "0.1.0"
 plugin_description = (
-    "Traces your favourite F1 driver's live on-track position onto a Sisyphus "
-    "sand table during race weekends, using the OpenF1 API."
+    "Drives the Sisyphus table's under-surface WS2812FX LED strip (via an Arduino Nano "
+    "over serial), with manual pattern control plus an optional F1-race-flag-reactive mode."
 )
 plugin_author = "Matteo"
 plugin_author_email = ""
-plugin_url = "https://github.com/yourusername/OctoPrint-F1Sisyphus"
+plugin_url = "https://github.com/yourusername/OctoPrint-NanoLED"
 plugin_license = "AGPLv3"
-plugin_requires = ["requests", "backports.zoneinfo;python_version<'3.9'"]
+plugin_requires = ["pyserial"]
 
 
 def params():

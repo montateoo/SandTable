@@ -44,6 +44,12 @@ class OpenF1Client(object):
             params["date>"] = date_gt
         return self._get("location", params=params)
 
+    def get_race_control(self, session_key, date_gt=None):
+        params = {"session_key": session_key}
+        if date_gt:
+            params["date>"] = date_gt
+        return self._get("race_control", params=params)
+
     def get_upcoming_race(self, after_utc):
         """The earliest Race session starting strictly after after_utc, or
         None if no future race is in the published calendar yet."""

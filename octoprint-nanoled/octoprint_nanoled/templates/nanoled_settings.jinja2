@@ -1,0 +1,25 @@
+<form class="form-horizontal">
+    <div class="control-group">
+        <label class="control-label">{{ _('Enabled') }}</label>
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.settings.plugins.nanoled.enabled">
+                {{ _('Master switch — commands are dropped while off') }}
+            </label>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Serial port') }}</label>
+        <div class="controls">
+            <input type="text" class="input-block-level" placeholder="/dev/serial0" data-bind="value: settings.settings.plugins.nanoled.serial_port">
+            <span class="help-block">{{ _('The Pi GPIO UART device the Nano\'s TX/RX is wired to.') }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Baud rate') }}</label>
+        <div class="controls">
+            <input type="number" class="input-small" data-bind="value: settings.settings.plugins.nanoled.baud_rate">
+            <span class="help-block">{{ _('Must match the sketch\'s Serial.begin(...) call (115200).') }}</span>
+        </div>
+    </div>
+</form>

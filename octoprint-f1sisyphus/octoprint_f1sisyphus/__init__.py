@@ -39,6 +39,30 @@ from .circuit import CircuitError
 from .openf1 import OpenF1Client, OpenF1Error
 from .shelly import ShellyError
 
+# Standard race distance per circuit_key, used only for predictive "last lap" LED
+# lighting (turn white during the actual final lap, not just once it's already
+# over). Neither OpenF1 nor Jolpica/Ergast expose a *scheduled* lap count ahead
+# of a race (verified live during planning -- Jolpica's races.json schedule
+# endpoint has no laps field at all; results.json's "laps" is only populated
+# after the race finishes). Standard distances are public knowledge and rarely
+# change, so this small table is the practical choice. An unlisted circuit_key
+# just means predictive last-lap is skipped -- the CHEQUERED-flag finish
+# detection in _poll_position works regardless.
+CIRCUIT_LAP_COUNTS = {
+    19: 71,  # Austria (Red Bull Ring) -- used throughout this plugin's replay testing
+}
+
+# OpenF1 race_control `flag` values (category="Flag") mapped to nanoled's
+# SOLID:<name> colors. BLUE (let-a-leader-past) is informational, not a
+# race-state flag, so it's deliberately absent here and ignored.
+FLAG_TO_LED_COLOR = {
+    "RED": "RED",
+    "YELLOW": "YELLOW",
+    "DOUBLE YELLOW": "YELLOW",
+    "GREEN": "GREEN",
+    "CLEAR": "GREEN",
+}
+
 
 class F1SisyphusPlugin(
     octoprint.plugin.SettingsPlugin,
@@ -65,11 +89,33 @@ class F1SisyphusPlugin(
         self._last_error = None
         self._next_scheduled_race = None
         self._openf1 = None
+        self._nano_helpers = None
+        self._flag_poll_tick = 0
+        self._last_seen_flag_date = None
+        self._last_led_color = None
+        self._last_lap_lit = False
 
     def _get_openf1(self):
         if self._openf1 is None:
             self._openf1 = OpenF1Client(api_base=self._settings.get(["api_base"]))
         return self._openf1
+
+    def _get_nano(self):
+        """Returns the nanoled plugin's exposed helper methods (set_pattern,
+        set_solid, flicker_rainbow, flash_white), or None if F1-mode lighting
+        is off or the nanoled plugin isn't installed/enabled -- a soft
+        dependency, never a hard failure for the race lifecycle itself."""
+        if not self._settings.get_boolean(["nano_f1_lights_enabled"]):
+            return None
+        if self._nano_helpers is None:
+            helpers = self._plugin_manager.get_helpers(
+                "nanoled", "set_pattern", "set_solid", "flicker_rainbow", "flash_white"
+            )
+            if not helpers:
+                self._logger.warning("F1Sisyphus: nano_f1_lights_enabled but the nanoled plugin isn't available")
+                return None
+            self._nano_helpers = helpers
+        return self._nano_helpers
 
     # --------------------------------------------------------------- settings
     def get_settings_defaults(self):
@@ -104,6 +150,8 @@ class F1SisyphusPlugin(
             shelly_switch_id=0,
             shelly_script_id=None,
             shelly_schedule_id=None,
+            nano_f1_lights_enabled=False,
+            flag_poll_every_ticks=5,
         )
 
     def get_settings_restricted_paths(self):
@@ -115,7 +163,7 @@ class F1SisyphusPlugin(
 
     def get_template_configs(self):
         return [
-            dict(type="settings", custom_bindings=False),
+            dict(type="settings", custom_bindings=True),
             dict(type="tab", custom_bindings=True),
         ]
 
@@ -314,11 +362,23 @@ class F1SisyphusPlugin(
             self._points_drawn = 0
             self._last_progress_time = time.time()
             self._tracking_started_at = time.time()
+            self._flag_poll_tick = 0
+            self._last_seen_flag_date = None
+            self._last_led_color = None
+            self._last_lap_lit = False
             upcoming = self._upcoming_session
 
         bounds = self._calibrate_bounds(upcoming)
         with self._lock:
             self._bounds = bounds
+
+        # Best-effort approximation of "lights about to go out": OpenF1's
+        # race_control feed doesn't reliably carry an explicit start-lights
+        # message for every session, so this fires on the WAIT_FOR_LIVE ->
+        # TRACKING transition instead, when the session is first detected live.
+        nano = self._get_nano()
+        if nano:
+            nano["flicker_rainbow"]()
 
         interval = float(self._settings.get(["live_poll_interval"]))
         timer = RepeatedTimer(interval, self._poll_position, run_first=True)
@@ -367,6 +427,12 @@ class F1SisyphusPlugin(
         if not upcoming or not upcoming.get("session_key"):
             return
 
+        if self._poll_race_control_due() and self._poll_race_control(upcoming):
+            # CHEQUERED seen: _poll_race_control already cancelled the tracking
+            # timer and dispatched _enter_complete. No point also fetching
+            # more position data this tick.
+            return
+
         with self._lock:
             last_seen = self._last_seen_date
 
@@ -394,6 +460,86 @@ class F1SisyphusPlugin(
             if "date" in p:
                 with self._lock:
                     self._last_seen_date = p["date"]
+
+    # ------------------------------------------------- F1-mode LED reactions
+    def _poll_race_control_due(self):
+        with self._lock:
+            self._flag_poll_tick += 1
+            tick = self._flag_poll_tick
+        every = self._settings.get_int(["flag_poll_every_ticks"]) or 5
+        return tick % every == 0
+
+    def _poll_race_control(self, upcoming):
+        """Polls race_control for new flag/lap messages and reacts on the
+        nanoled plugin (if F1-mode lighting is enabled and available).
+        Returns True if a CHEQUERED flag was seen -- the caller short-circuits
+        straight to _enter_complete rather than waiting on the no-data
+        timeout, since CHEQUERED is a clean, unambiguous "race over" signal."""
+        nano = self._get_nano()
+        if not nano:
+            return False
+
+        with self._lock:
+            last_seen = self._last_seen_flag_date
+
+        try:
+            rows = self._get_openf1().get_race_control(upcoming["session_key"], date_gt=last_seen)
+        except OpenF1Error as exc:
+            self._logger.warning("F1Sisyphus: race_control poll failed: %s", exc)
+            return False
+
+        if not rows:
+            return False
+
+        rows.sort(key=lambda r: r.get("date", ""))
+        with self._lock:
+            self._last_seen_flag_date = rows[-1].get("date") or last_seen
+
+        flag_rows = [r for r in rows if r.get("category") == "Flag"]
+        chequered = any(r.get("flag") == "CHEQUERED" for r in flag_rows)
+
+        if flag_rows:
+            color = FLAG_TO_LED_COLOR.get(flag_rows[-1].get("flag"))
+            with self._lock:
+                changed = bool(color) and color != self._last_led_color
+            if changed:
+                nano["set_solid"](color)
+                with self._lock:
+                    self._last_led_color = color
+
+        self._maybe_light_last_lap(upcoming, rows, nano)
+
+        if chequered:
+            nano["flash_white"]()
+            with self._lock:
+                timer = self._tracking_timer
+                self._tracking_timer = None
+            if timer:
+                timer.cancel()
+            self._run_bg(self._enter_complete)
+            return True
+
+        return False
+
+    def _maybe_light_last_lap(self, upcoming, rows, nano):
+        with self._lock:
+            already_lit = self._last_lap_lit
+        if already_lit:
+            return
+        try:
+            circuit_key = int(upcoming.get("circuit_key"))
+        except (TypeError, ValueError):
+            return
+        total_laps = CIRCUIT_LAP_COUNTS.get(circuit_key)
+        if not total_laps:
+            return
+        lap_numbers = [r.get("lap_number") for r in rows if r.get("lap_number")]
+        if not lap_numbers or max(lap_numbers) < total_laps:
+            return
+        nano["set_solid"]("WHITE")
+        with self._lock:
+            self._last_lap_lit = True
+            self._last_led_color = "WHITE"
 
     def _handle_point(self, point):
         if "x" not in point or "y" not in point:
@@ -454,6 +600,10 @@ class F1SisyphusPlugin(
         with self._lock:
             _, phase = race.advance_on_race_ended(self._phase)
             self._phase = phase
+
+        nano = self._get_nano()
+        if nano:
+            nano["set_pattern"](10)  # back to the Nano's own default ambient pattern
 
         try:
             self._reschedule_for_next_race()
@@ -628,6 +778,8 @@ class F1SisyphusPlugin(
                 dry_run=self._settings.get_boolean(["dry_run"]),
                 last_error=self._last_error,
                 next_scheduled_race=self._next_scheduled_race,
+                last_led_color=self._last_led_color,
+                last_lap_lit=self._last_lap_lit,
             )
 
 
@@ -636,7 +788,7 @@ def _parse_iso_utc(date_str):
 
 
 __plugin_name__ = "F1 Sisyphus Tracker"
-__plugin_pythoncompat__ = ">=3.9,<4"
+__plugin_pythoncompat__ = ">=3.7,<4"
 
 
 def __plugin_load__():
