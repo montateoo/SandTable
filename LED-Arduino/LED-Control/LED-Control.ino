@@ -53,13 +53,31 @@ int inputBrightnessPin = A0;
 
 WS2812FX tableSurfaceLEDs = WS2812FX(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
+// Ramps brightness 0 -> maximumBrightnesAllowed over rampMs, calling .service()
+// at each step so the strip actually updates progressively instead of jumping
+// straight to full brightness in one instant (spreads the current draw increase
+// out over time instead of a single sharp step on the shared power supply).
+void softStart(unsigned long rampMs) {
+  const int steps = 30;
+  for (int i = 1; i <= steps; i++) {
+    int b = (maximumBrightnesAllowed * i) / steps;
+    tableSurfaceLEDs.setBrightness(b);
+    tableSurfaceLEDs.service();
+    delay(rampMs / steps);
+  }
+}
+
 void setup() {
   Serial.begin(115200);
 
   pinMode(interruptPin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(interruptPin), patternMode, FALLING);
   tableSurfaceLEDs.init();
+  tableSurfaceLEDs.setBrightness(0);  // start dark -- softStart() ramps up below
   pattern10();
+  softStart(1500);  // fade brightness 0 -> maximumBrightnesAllowed over 1.5s instead
+                     // of snapping all 70 LEDs to full white in one instant, to avoid
+                     // a sharp current step on the shared power supply at boot
 
     // initialize all the brightness readings to 50:
   for (int thisBrightnessReading = 0; thisBrightnessReading < numReadings; thisBrightnessReading++) {
