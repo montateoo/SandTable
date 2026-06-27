@@ -17,6 +17,9 @@ venv/
 # Generated pattern-gallery previews
 tools/_*.png
 
+# Generated QR label — encodes a specific host/IP, regenerate with qr.py
+sandtable-viewer/qr.png
+
 # Local pattern library — lives on the Pi (OctoPrint uploads), not part of the plugin
 draw/
 

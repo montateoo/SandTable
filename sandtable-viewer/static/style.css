@@ -1,0 +1,96 @@
+@font-face { font-display: swap; }
+
+:root {
+  --sand-dark: #1b1712;
+  --sand: #2a231a;
+  --groove: #6b5836;
+  --groove-bright: #e8a33d;
+  --ink: #f3e9d2;
+  --ink-dim: #b7a98a;
+  --teal: #3ec9b0;
+  --amber: #e8a33d;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--sand-dark);
+  color: var(--ink);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#hud {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: linear-gradient(to bottom, rgba(0,0,0,.35), transparent);
+  position: relative;
+  z-index: 2;
+}
+
+.badge {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  padding: 5px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.badge--idle  { background: rgba(255,255,255,.08); color: var(--ink-dim); }
+.badge--draw  { background: rgba(62,201,176,.18); color: var(--teal); box-shadow: 0 0 14px rgba(62,201,176,.25) inset; }
+.badge--erase { background: rgba(232,163,61,.18); color: var(--amber); box-shadow: 0 0 14px rgba(232,163,61,.25) inset; }
+
+#meta { flex: 1 1 auto; min-width: 0; }
+#filename {
+  font-size: 17px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#sub {
+  font-size: 12px;
+  color: var(--ink-dim);
+  display: flex;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+#pct {
+  flex: 0 0 auto;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--groove-bright);
+  text-shadow: 0 0 18px rgba(232,163,61,.45);
+}
+
+#stage {
+  flex: 1 1 auto;
+  width: 100%;
+  display: block;
+  transition: opacity .5s ease;
+}
+
+#progressbar {
+  height: 3px;
+  background: rgba(255,255,255,.06);
+}
+#progressbar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--groove), var(--groove-bright));
+  box-shadow: 0 0 10px rgba(232,163,61,.6);
+  transition: width .4s ease;
+}

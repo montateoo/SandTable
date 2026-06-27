@@ -1,0 +1,5 @@
+flask>=2.2
+requests>=2.25
+qrcode[pil]>=7.4
+# tomllib is built into Python 3.11+; only needed on older interpreters (e.g. OctoPi 0.18's Python 3.7)
+tomli>=2.0; python_version < "3.11"
