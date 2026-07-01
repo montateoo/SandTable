@@ -1,7 +1,7 @@
 # OctoPrint-SandTable
 
 Turns a Sisyphus-style sand table (running [OctoPrint](https://octoprint.org/) on a
-Raspberry Pi) into an autonomous appliance.
+Raspberry pi 3 model A+) into an autonomous appliance.
 
 While the machine is powered on, the plugin automatically runs **N rounds of
 `ERASER → DRAW`** (default 2), picking patterns **round-robin** from two folders.
