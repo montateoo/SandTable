@@ -782,6 +782,12 @@ class F1SisyphusPlugin(
                 last_lap_lit=self._last_lap_lit,
             )
 
+    def get_status(self):
+        """Exposed via __plugin_helpers__ so other plugins (octoprint-googlehome)
+        can read race phase/circuit info in-process -- same pattern this plugin
+        already consumes from nanoled."""
+        return self._status()
+
 
 def _parse_iso_utc(date_str):
     return datetime.datetime.fromisoformat(date_str.replace("Z", "+00:00"))
@@ -792,5 +798,15 @@ __plugin_pythoncompat__ = ">=3.7,<4"
 
 
 def __plugin_load__():
+    plugin = F1SisyphusPlugin()
+
     global __plugin_implementation__
-    __plugin_implementation__ = F1SisyphusPlugin()
+    __plugin_implementation__ = plugin
+
+    # Exposed so octoprint-googlehome can read race phase/circuit info in-process,
+    # the same way this plugin itself consumes nanoled's helpers -- see
+    # https://docs.octoprint.org/en/main/plugins/helpers.html
+    global __plugin_helpers__
+    __plugin_helpers__ = dict(
+        get_status=plugin.get_status,
+    )

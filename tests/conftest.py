@@ -21,3 +21,10 @@ NANOLED_PKG_DIR = os.path.abspath(
 )
 if NANOLED_PKG_DIR not in sys.path:
     sys.path.insert(0, NANOLED_PKG_DIR)
+
+# Same trick for octoprint-googlehome's pure module (smarthome.py has no OctoPrint dependencies).
+GOOGLEHOME_PKG_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "octoprint-googlehome", "octoprint_googlehome")
+)
+if GOOGLEHOME_PKG_DIR not in sys.path:
+    sys.path.insert(0, GOOGLEHOME_PKG_DIR)
