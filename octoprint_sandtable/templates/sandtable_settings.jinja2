@@ -48,6 +48,14 @@
         </div>
     </div>
 
+    <div class="control-group">
+        <label class="control-label">{{ _('Post-draw pause (s)') }}</label>
+        <div class="controls">
+            <input type="number" min="0" class="input-mini" data-bind="value: settings.plugins.sandtable.post_draw_pause_seconds">
+            <span class="help-block">{{ _('Seconds to wait after each draw finishes, before starting the eraser or powering off. 0 = no pause. Example: 300 = 5 minutes.') }}</span>
+        </div>
+    </div>
+
     <hr>
     <h4>{{ _('Smart plug (local LAN)') }}</h4>
 

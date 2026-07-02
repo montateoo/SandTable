@@ -42,8 +42,10 @@ class SandTablePlugin(
         self._rounds = 1
         self._current_path = None
         self._skip = False
+        self._stop_dedup_key = None
         self._last_error = None
         self._autostart_inflight = False
+        self._pausing = False
 
     # --------------------------------------------------------------- settings
     def get_settings_defaults(self):
@@ -60,6 +62,7 @@ class SandTablePlugin(
             "off_delay_seconds": 60,     # plug stays on this long so the Pi can halt
             "shutdown_pi": True,         # clean OS shutdown before power is cut
             "startup_delay_seconds": 30,
+            "post_draw_pause_seconds": 0,  # wait this long after each draw before eraser/power-off
             "program_wake": False,       # future: program the plug's wake timer
             "wake_mode": "after_hours",
             "wake_value": "8",
@@ -147,13 +150,16 @@ class SandTablePlugin(
         with self._lock:
             if not self._running:
                 return False, "Cycle is not running"
+            if self._skip:
+                return True, "Already skipping"
+            if self._pausing:
+                self._skip = True  # _pause_between() will see this and exit early
+                return True, "Skipping pause"
+            if not self._printer.is_printing():
+                return False, "Nothing is printing to skip"
             self._skip = True
-        if self._printer.is_printing():
             self._printer.cancel_print()
             return True, "Skipping current pattern"
-        with self._lock:
-            self._skip = False
-        return False, "Nothing is printing to skip"
 
     # --------------------------------------------------------- event handlers
     def _handle_print_done(self, payload):
@@ -166,6 +172,14 @@ class SandTablePlugin(
             action, next_phase, next_round = cycle.advance(self._phase, self._round, self._rounds)
             self._round = next_round
             self._phase = next_phase
+
+        # After a draw, pause before the next eraser or the final power-off.
+        if action in (cycle.ACTION_PRINT_ERASER, cycle.ACTION_COMPLETE):
+            pause = self._settings.get_int(["post_draw_pause_seconds"]) or 0
+            self._pause_between(pause)
+            with self._lock:
+                if not self._running:
+                    return  # cycle was stopped during the pause
 
         if action == cycle.ACTION_COMPLETE:
             with self._lock:
@@ -180,7 +194,18 @@ class SandTablePlugin(
                 self._stop_with_error(str(exc))
 
     def _handle_print_stop(self, event, payload):
+        # A single cancel emits BOTH a PrintCancelled and a PrintFailed(reason=
+        # "cancelled") event. Without de-duping, the first consumes the skip flag
+        # and advances the cycle, then the twin event sees skip already cleared,
+        # mis-reads it as a spontaneous failure, and kills the cycle (running=
+        # False) -- the table draws one more pattern then silently stops. Key off
+        # the stopped file so only the first of the pair is acted on; the key is
+        # re-armed in _print_file when the next print actually starts.
+        stop_key = (payload or {}).get("path") or (payload or {}).get("name") or self._current_path
         with self._lock:
+            if stop_key is not None and stop_key == self._stop_dedup_key:
+                return
+            self._stop_dedup_key = stop_key
             running = self._running
             skipping = self._skip
             if skipping:
@@ -208,7 +233,12 @@ class SandTablePlugin(
     def _print_file(self, path):
         if not self._wait_ready():
             raise CycleError("Printer was not ready to start the next print")
-        self._current_path = path
+        with self._lock:
+            self._current_path = path
+            # Re-arm stop de-dup for this fresh print. Safe against the twin-event
+            # race: the duplicate stop arrives within ms of the first, well before
+            # _wait_ready (>=0.5s) lets us reach here for the next print.
+            self._stop_dedup_key = None
         rounds_label = "unlimited" if self._rounds <= 0 else str(self._rounds)
         self._logger.info(
             "SandTable: printing %s (%s, round %d/%s)",
@@ -311,7 +341,25 @@ class SandTablePlugin(
                 self._autostart_inflight = False
 
     # --------------------------------------------------------------- helpers
-    def _wait_ready(self, timeout=15):
+    def _pause_between(self, seconds):
+        """Wait between the end of a draw and the next eraser / power-off.
+        Exits early if stop_cycle() is called or skip_current() sets _skip."""
+        if seconds <= 0:
+            return
+        with self._lock:
+            self._pausing = True
+        self._logger.info("SandTable: pausing %ds after draw", seconds)
+        deadline = time.time() + seconds
+        while time.time() < deadline:
+            with self._lock:
+                if not self._running or self._skip:
+                    break
+            time.sleep(1)
+        with self._lock:
+            self._skip = False  # consume skip so the next print starts clean
+            self._pausing = False
+
+    def _wait_ready(self, timeout=90):
         deadline = time.time() + timeout
         while time.time() < deadline:
             if (
@@ -420,9 +468,11 @@ class SandTablePlugin(
             rounds = self._rounds
             current = self._current_path
             err = self._last_error
+            pausing = self._pausing
         return {
             "running": running,
             "phase": phase,
+            "pausing": pausing,
             "round": rnd,
             "rounds": rounds if running else (self._settings.get_int(["rounds"]) or 1),
             "current_file": current,
@@ -434,6 +484,11 @@ class SandTablePlugin(
             "last_error": err,
             "plug_types": list(PLUG_TYPES),
         }
+
+    def get_status(self):
+        """Exposed via __plugin_helpers__ so other plugins (octoprint-googlehome)
+        can read cycle phase/running state in-process."""
+        return self._status()
 
     # ------------------------------------------------------------ sw update
     def get_update_information(self):
@@ -474,3 +529,12 @@ def __plugin_load__():
     __plugin_hooks__ = {
         "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information
     }
+
+    # Exposed so octoprint-googlehome can read status / trigger skip in-process,
+    # the same helpers pattern used between f1sisyphus and nanoled -- see
+    # https://docs.octoprint.org/en/main/plugins/helpers.html
+    global __plugin_helpers__
+    __plugin_helpers__ = dict(
+        get_status=__plugin_implementation__.get_status,
+        skip_current=__plugin_implementation__.skip_current,
+    )
