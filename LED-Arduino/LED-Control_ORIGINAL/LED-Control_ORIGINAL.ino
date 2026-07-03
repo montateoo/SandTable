@@ -214,7 +214,8 @@ void loop() {
     }
   
     averageBrightness = totalBrightness / numReadings;                    // calculate the average:
-    int ledValueBrightness = map(averageBrightness, -47, 900, 0, maximumBrightnesAllowed);    // Map the brightness value to range of LEDs 
+    int ledValueBrightness = map(averageBrightness, 0, 1023, 0, maximumBrightnesAllowed);    // Map the brightness value to range of LEDs
+    ledValueBrightness = constrain(ledValueBrightness, 0, maximumBrightnesAllowed);          // clamp in case of out-of-range input
     //Serial.print("Brightness of LEDs is set to ");
     //Serial.println(ledValueBrightness);
     tableSurfaceLEDs.setBrightness(ledValueBrightness);                 //set the table LEDs brightness value
