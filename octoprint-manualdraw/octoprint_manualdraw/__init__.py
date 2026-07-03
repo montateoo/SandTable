@@ -83,6 +83,9 @@ class ManualDrawPlugin(
             "watchdog_timeout_seconds": 2,
             "hold_seconds": 3,
             "min_move": 0.4,          # reuse octoprint_f1sisyphus's dedup default
+            "swap_axes": False,       # swap which physical tilt axis drives X vs Y
+            "invert_x": False,
+            "invert_y": False,
         }
 
     def get_settings_restricted_paths(self):
@@ -220,7 +223,11 @@ class ManualDrawPlugin(
         dead_zone = self._settings.get_float(["dead_zone_deg"])
         max_tilt = self._settings.get_float(["max_tilt_deg"])
         max_speed = self._settings.get_float(["max_speed_mm_s"])
-        vx, vy = manual.tilt_to_velocity(dbeta, dgamma, dead_zone, max_tilt, max_speed)
+        swap = self._settings.get_boolean(["swap_axes"])
+        inv_x = self._settings.get_boolean(["invert_x"])
+        inv_y = self._settings.get_boolean(["invert_y"])
+        vx, vy = manual.tilt_to_velocity(dbeta, dgamma, dead_zone, max_tilt, max_speed,
+                                         swap_axes=swap, invert_x=inv_x, invert_y=inv_y)
         nx, ny = manual.integrate_and_clamp(x, y, vx, vy, dt, self._bounds())
 
         min_move = self._settings.get_float(["min_move"]) or 0.0

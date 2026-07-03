@@ -87,12 +87,20 @@ def _axis_speed(delta_deg, dead_zone_deg, max_tilt_deg, max_speed_mm_s):
     return speed if delta_deg > 0 else -speed
 
 
-def tilt_to_velocity(dbeta, dgamma, dead_zone_deg, max_tilt_deg, max_speed_mm_s):
+def tilt_to_velocity(dbeta, dgamma, dead_zone_deg, max_tilt_deg, max_speed_mm_s,
+                     swap_axes=False, invert_x=False, invert_y=False):
     """Joystick-style mapping from calibrated tilt deltas (degrees) to a table
     velocity (mm/s). gamma (left/right tilt) drives X, beta (front/back tilt)
-    drives Y -- a phone held flat and tilted like a tray."""
+    drives Y by default; swap_axes, invert_x, invert_y let the user correct for
+    how the phone is oriented relative to the table."""
+    if swap_axes:
+        dbeta, dgamma = dgamma, dbeta
     vx = _axis_speed(dgamma, dead_zone_deg, max_tilt_deg, max_speed_mm_s)
     vy = _axis_speed(dbeta, dead_zone_deg, max_tilt_deg, max_speed_mm_s)
+    if invert_x:
+        vx = -vx
+    if invert_y:
+        vy = -vy
     return vx, vy
 
 

@@ -36,6 +36,36 @@
     </div>
 
     <hr>
+    <h4>{{ _('Axis orientation') }}</h4>
+    <div class="control-group">
+        <label class="control-label">{{ _('Swap axes') }}</label>
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.plugins.manualdraw.swap_axes">
+                {{ _('Swap X and Y (left/right tilt drives Y, front/back tilt drives X)') }}
+            </label>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Invert X') }}</label>
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.plugins.manualdraw.invert_x">
+                {{ _('Tilt right moves ball left') }}
+            </label>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Invert Y') }}</label>
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.plugins.manualdraw.invert_y">
+                {{ _('Tilt forward moves ball backward') }}
+            </label>
+        </div>
+    </div>
+
+    <hr>
     <h4>{{ _('Control feel') }}</h4>
     <div class="control-group">
         <label class="control-label">{{ _('Max speed (mm/s)') }}</label>
