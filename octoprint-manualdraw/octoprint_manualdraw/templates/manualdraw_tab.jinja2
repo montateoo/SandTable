@@ -1,0 +1,28 @@
+<div class="manualdraw-tab">
+    <h3>ManualDraw</h3>
+
+    <div class="alert alert-info" data-bind="visible: !enabled()" style="display:none;">
+        {{ _('ManualDraw is disabled. Enable it in Settings to let people scan the QR code below.') }}
+    </div>
+
+    <div class="row-fluid">
+        <div class="span4">
+            <img class="manualdraw-qr" data-bind="attr: {src: qrSrc}" alt="QR code">
+        </div>
+        <div class="span8">
+            <table class="table table-condensed manualdraw-kv">
+                <tr><th>{{ _('Status') }}</th><td data-bind="text: stateText"></td></tr>
+                <tr><th>{{ _('Position') }}</th><td data-bind="text: positionText"></td></tr>
+                <tr><th>{{ _('URL') }}</th><td><code data-bind="text: url"></code></td></tr>
+            </table>
+            <div class="text-error" data-bind="visible: lastError(), text: lastError"></div>
+            <div class="btn-group">
+                <button class="btn" data-bind="click: regenerate"><i class="fa fa-refresh"></i> {{ _('Regenerate code') }}</button>
+                <button class="btn" data-bind="click: refresh"><i class="fa fa-refresh"></i> {{ _('Refresh status') }}</button>
+            </div>
+            <p class="muted" style="margin-top:10px;">
+                {{ _('Regenerating invalidates the current code immediately (any phone mid-session is disconnected). Print this QR and stick it next to the table.') }}
+            </p>
+        </div>
+    </div>
+</div>

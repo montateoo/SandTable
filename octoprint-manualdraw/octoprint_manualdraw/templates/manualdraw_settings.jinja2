@@ -1,0 +1,80 @@
+<h3>ManualDraw</h3>
+<p class="muted">
+    Lets someone scan a QR code next to the table, hold a button for a few seconds, and
+    steer the ball with their phone's tilt. Whatever the table was drawing pauses while
+    they're in control and resumes when they let go.
+</p>
+
+<form class="form-horizontal">
+
+    <div class="control-group">
+        <label class="control-label">{{ _('Enabled') }}</label>
+        <div class="controls">
+            <label class="checkbox">
+                <input type="checkbox" data-bind="checked: settings.plugins.manualdraw.enabled">
+                {{ _('Master switch — allow the QR page to take control') }}
+            </label>
+        </div>
+    </div>
+
+    <hr>
+    <h4>{{ _('Table bounds (mm)') }}</h4>
+    <div class="control-group">
+        <label class="control-label">{{ _('X range') }}</label>
+        <div class="controls">
+            <input type="number" class="input-mini" data-bind="value: settings.plugins.manualdraw.table_min_x"> &ndash;
+            <input type="number" class="input-mini" data-bind="value: settings.plugins.manualdraw.table_max_x">
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Y range') }}</label>
+        <div class="controls">
+            <input type="number" class="input-mini" data-bind="value: settings.plugins.manualdraw.table_min_y"> &ndash;
+            <input type="number" class="input-mini" data-bind="value: settings.plugins.manualdraw.table_max_y">
+            <span class="help-block">{{ _('Defaults to the real 370x400mm bed. Manual jogs are clamped to this box.') }}</span>
+        </div>
+    </div>
+
+    <hr>
+    <h4>{{ _('Control feel') }}</h4>
+    <div class="control-group">
+        <label class="control-label">{{ _('Max speed (mm/s)') }}</label>
+        <div class="controls">
+            <input type="number" min="1" class="input-mini" data-bind="value: settings.plugins.manualdraw.max_speed_mm_s">
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Jog feedrate') }}</label>
+        <div class="controls">
+            <input type="number" min="1" class="input-mini" data-bind="value: settings.plugins.manualdraw.jog_feedrate">
+            <span class="help-block">{{ _('Keep well above Max speed x 60, or the feedrate itself becomes the limiter.') }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Dead zone (deg)') }}</label>
+        <div class="controls">
+            <input type="number" min="0" class="input-mini" data-bind="value: settings.plugins.manualdraw.dead_zone_deg">
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Max tilt (deg)') }}</label>
+        <div class="controls">
+            <input type="number" min="1" class="input-mini" data-bind="value: settings.plugins.manualdraw.max_tilt_deg">
+            <span class="help-block">{{ _('Tilt at or beyond this angle from the calibrated center = full speed.') }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Hold to activate (s)') }}</label>
+        <div class="controls">
+            <input type="number" min="1" class="input-mini" data-bind="value: settings.plugins.manualdraw.hold_seconds">
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Watchdog timeout (s)') }}</label>
+        <div class="controls">
+            <input type="number" min="1" class="input-mini" data-bind="value: settings.plugins.manualdraw.watchdog_timeout_seconds">
+            <span class="help-block">{{ _('Auto-release control (and resume the paused draw) if the phone stops sending updates for this long.') }}</span>
+        </div>
+    </div>
+
+</form>

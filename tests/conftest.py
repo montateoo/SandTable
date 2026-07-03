@@ -28,3 +28,10 @@ GOOGLEHOME_PKG_DIR = os.path.abspath(
 )
 if GOOGLEHOME_PKG_DIR not in sys.path:
     sys.path.insert(0, GOOGLEHOME_PKG_DIR)
+
+# Same trick for octoprint-manualdraw's pure module (manual.py has no OctoPrint dependencies).
+MANUALDRAW_PKG_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "octoprint-manualdraw", "octoprint_manualdraw")
+)
+if MANUALDRAW_PKG_DIR not in sys.path:
+    sys.path.insert(0, MANUALDRAW_PKG_DIR)

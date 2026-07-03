@@ -1,0 +1,12 @@
+.manualdraw-tab .manualdraw-qr {
+    width: 100%;
+    max-width: 220px;
+    image-rendering: pixelated;
+    border: 1px solid #ddd;
+    padding: 8px;
+    background: #fff;
+}
+
+.manualdraw-tab .manualdraw-kv th {
+    width: 120px;
+}

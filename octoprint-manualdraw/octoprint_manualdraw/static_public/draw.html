@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Disegna tu stesso</title>
+<link rel="stylesheet" href="draw.css">
+</head>
+<body>
+<div class="wrap">
+    <h1>SandTable</h1>
+    <p class="status" id="status">Tieni premuto per prendere il controllo</p>
+
+    <button id="drawBtn" class="draw-btn" aria-label="Disegna tu stesso">
+        <svg class="ring" viewBox="0 0 120 120">
+            <circle class="ring-bg" cx="60" cy="60" r="54"></circle>
+            <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="54"></circle>
+        </svg>
+        <span class="label">Disegna<br>tu stesso</span>
+    </button>
+
+    <p class="hint" id="hint">Tieni premuto 3 secondi, poi inclina il telefono per muovere la pallina.</p>
+</div>
+<script src="draw.js"></script>
+</body>
+</html>
