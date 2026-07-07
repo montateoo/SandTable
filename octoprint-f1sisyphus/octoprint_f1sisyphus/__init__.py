@@ -157,6 +157,11 @@ class F1SisyphusPlugin(
     def get_settings_restricted_paths(self):
         return {"admin": [["shelly_password"]]}
 
+    def on_settings_save(self, data):
+        octoprint.plugin.SettingsPlugin.on_settings_save(self, data)
+        with self._lock:
+            self._openf1 = None  # force re-init with the new api_base on next use
+
     # -------------------------------------------------------------- templates
     def get_assets(self):
         return dict(js=["js/f1sisyphus.js"], css=["css/f1sisyphus.css"])
@@ -452,6 +457,12 @@ class F1SisyphusPlugin(
         with self._lock:
             self._last_progress_time = time.time()
 
+        n = len(points)
+        # Spread points over the poll interval so the ball moves at ~4 Hz
+        # instead of zipping through the whole batch in <100 ms then freezing
+        # for the rest of the interval.  pace=0 when only one point (no sleep).
+        pace = self._settings.get_float(["live_poll_interval"]) / n if n > 1 else 0.0
+
         for p in points:
             with self._lock:
                 if self._phase != race.PHASE_TRACKING:
@@ -460,6 +471,8 @@ class F1SisyphusPlugin(
             if "date" in p:
                 with self._lock:
                     self._last_seen_date = p["date"]
+            if pace > 0:
+                time.sleep(pace)
 
     # ------------------------------------------------- F1-mode LED reactions
     def _poll_race_control_due(self):
@@ -626,7 +639,10 @@ class F1SisyphusPlugin(
 
     def _reschedule_for_next_race(self):
         now_utc = datetime.datetime.now(datetime.timezone.utc)
-        next_race = self._get_openf1().get_upcoming_race(now_utc)
+        # Always use the public OpenF1 API for scheduling — the bridge only serves
+        # live location data and may be down or returning 401 when the race ends.
+        public_client = OpenF1Client("https://api.openf1.org/v1")
+        next_race = public_client.get_upcoming_race(now_utc)
         if next_race is None:
             self._logger.warning("F1Sisyphus: no upcoming race found; skipping reschedule")
             return

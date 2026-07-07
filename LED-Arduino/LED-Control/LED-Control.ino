@@ -38,7 +38,7 @@ int maximumBrightnesAllowed = 128;  // set this value the maximum brightness you
 const byte interruptPin = 2;
 const byte potBrightness = A0;
 const byte potSpeed = A2;
-int patternNumber = 10;  // preferred startup pattern
+int patternNumber = 0;
 static unsigned long last_check_time = 0;
 
 // for smoothing out the potentiometer readings
@@ -74,7 +74,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(interruptPin), patternMode, FALLING);
   tableSurfaceLEDs.init();
   tableSurfaceLEDs.setBrightness(0);  // start dark -- softStart() ramps up below
-  pattern10();
+  pattern0();
   softStart(1500);  // fade brightness 0 -> maximumBrightnesAllowed over 1.5s instead
                      // of snapping all 70 LEDs to full white in one instant, to avoid
                      // a sharp current step on the shared power supply at boot
@@ -274,7 +274,8 @@ void loop() {
     }
   
     averageBrightness = totalBrightness / numReadings;                    // calculate the average:
-    int ledValueBrightness = map(averageBrightness, -47, 900, 0, maximumBrightnesAllowed);    // Map the brightness value to range of LEDs 
+    int ledValueBrightness = map(averageBrightness, 0, 1023, 0, maximumBrightnesAllowed);    // Map the brightness value to range of LEDs
+    ledValueBrightness = constrain(ledValueBrightness, 0, maximumBrightnesAllowed);          // clamp in case of out-of-range input
     //Serial.print("Brightness of LEDs is set to ");
     //Serial.println(ledValueBrightness);
     tableSurfaceLEDs.setBrightness(ledValueBrightness);                 //set the table LEDs brightness value

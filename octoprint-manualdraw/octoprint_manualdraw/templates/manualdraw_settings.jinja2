@@ -8,6 +8,14 @@
 <form class="form-horizontal">
 
     <div class="control-group">
+        <label class="control-label">{{ _('Public base URL') }}</label>
+        <div class="controls">
+            <input type="text" class="input-block-level" placeholder="https://sandtable.tail8d412f.ts.net" data-bind="value: settings.plugins.manualdraw.base_url">
+            <span class="help-block">{{ _('Base URL used in the QR code. Set to your Tailscale/HTTPS address so phones get a working HTTPS link. Leave blank to use the current browser host (LAN only, no tilt).') }}</span>
+        </div>
+    </div>
+
+    <div class="control-group">
         <label class="control-label">{{ _('Enabled') }}</label>
         <div class="controls">
             <label class="checkbox">

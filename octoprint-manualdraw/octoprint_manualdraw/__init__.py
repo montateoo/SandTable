@@ -86,6 +86,7 @@ class ManualDrawPlugin(
             "swap_axes": False,       # swap which physical tilt axis drives X vs Y
             "invert_x": False,
             "invert_y": False,
+            "base_url": "",           # if set, used for QR/status URL instead of flask.request.host_url
         }
 
     def get_settings_restricted_paths(self):
@@ -176,6 +177,11 @@ class ManualDrawPlugin(
             if self._printer.is_printing():
                 self._printer.pause_print()
                 paused_by_us = True
+                # bettergrblsupport does NOT send feed-hold on pause — it only stops
+                # the file reader. GRBL keeps running and drains its planner buffer
+                # (up to ~15 commands). Wait for that drain before jogging, otherwise
+                # our G1s queue behind the buffered file commands and execute out of order.
+                time.sleep(0.5)
             self._printer.commands("G90")
         except Exception as exc:
             with self._lock:
@@ -332,8 +338,12 @@ class ManualDrawPlugin(
             return self._qr_png_response()
         return flask.jsonify(self._status())
 
+    def _public_base(self):
+        base = (self._settings.get(["base_url"]) or "").strip().rstrip("/")
+        return base if base else flask.request.host_url.rstrip("/")
+
     def _qr_png_response(self):
-        url = flask.request.host_url.rstrip("/") + "/plugin/manualdraw/draw?t=" + self._token
+        url = self._public_base() + "/plugin/manualdraw/draw?t=" + self._token
         img = qrcode.make(url)
         buf = io.BytesIO()
         img.save(buf, format="PNG")
@@ -348,7 +358,7 @@ class ManualDrawPlugin(
                 "paused_by_us": self._paused_by_us,
                 "current_xy": self._current_xy,
                 "last_error": self._last_error,
-                "url": flask.request.host_url.rstrip("/") + "/plugin/manualdraw/draw?t=" + self._token,
+                "url": self._public_base() + "/plugin/manualdraw/draw?t=" + self._token,
             }
 
     # ------------------------------------------------------------ sw update

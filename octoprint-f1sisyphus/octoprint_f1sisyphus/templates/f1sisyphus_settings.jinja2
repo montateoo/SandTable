@@ -22,6 +22,13 @@
     <hr>
     <h5>{{ _('OpenF1') }}</h5>
     <div class="control-group">
+        <label class="control-label">{{ _('API base URL') }}</label>
+        <div class="controls">
+            <input type="text" class="input-block-level" data-bind="value: settings.settings.plugins.f1sisyphus.api_base">
+            <span class="help-block">{{ _('Leave as https://api.openf1.org/v1. Only change to a local bridge URL on race weekends behind the OpenF1 paywall.') }}</span>
+        </div>
+    </div>
+    <div class="control-group">
         <label class="control-label">{{ _('OpenF1 driver number') }}</label>
         <div class="controls">
             <input type="number" class="input-small" data-bind="value: settings.settings.plugins.f1sisyphus.driver_number">

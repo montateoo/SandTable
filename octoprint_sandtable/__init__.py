@@ -361,6 +361,8 @@ class SandTablePlugin(
 
     def _wait_ready(self, timeout=90):
         deadline = time.time() + timeout
+        reconnect_at = time.time() + 20
+        reconnected = False
         while time.time() < deadline:
             if (
                 self._printer.is_operational()
@@ -368,6 +370,20 @@ class SandTablePlugin(
                 and not self._printer.is_paused()
             ):
                 return True
+            # If the printer is stuck (e.g. OctoPrint in "Finishing" because
+            # GRBL stopped responding at end-of-job), one reconnect resets it.
+            if not reconnected and time.time() >= reconnect_at:
+                reconnected = True
+                self._logger.warning(
+                    "SandTable: printer not ready after 20s; reconnecting to clear stuck state"
+                )
+                try:
+                    self._printer.disconnect()
+                    time.sleep(2)
+                    self._printer.connect()
+                    time.sleep(8)
+                except Exception:
+                    self._logger.exception("SandTable: reconnect attempt failed")
             time.sleep(0.5)
         return False
 
