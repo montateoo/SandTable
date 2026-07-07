@@ -25,6 +25,7 @@ class NanoLEDPlugin(
 ):
     def initialize(self):
         self._nano = None
+        self._current_pattern = 0
 
     # --------------------------------------------------------------- settings
     def get_settings_defaults(self):
@@ -67,7 +68,14 @@ class NanoLEDPlugin(
 
     def set_pattern(self, n):
         """n: 0-10. Returns True on success, False if disabled/unconfigured/failed."""
-        return self._send("set_pattern", n)
+        ok = self._send("set_pattern", n)
+        if ok:
+            self._current_pattern = int(n) % 11
+        return ok
+
+    def next_pattern(self):
+        """Cycle to the next pattern (0→1→...→10→0)."""
+        return self.set_pattern((self._current_pattern + 1) % 11)
 
     def set_solid(self, color_name):
         """color_name: RED, YELLOW, GREEN, or WHITE."""
@@ -81,7 +89,7 @@ class NanoLEDPlugin(
 
     # -------------------------------------------------------------- simple api
     def get_api_commands(self):
-        return dict(set_pattern=["n"], set_solid=["color"], flicker_rainbow=[], flash_white=[])
+        return dict(set_pattern=["n"], set_solid=["color"], flicker_rainbow=[], flash_white=[], next_pattern=[])
 
     def on_api_command(self, command, data):
         data = data or {}
@@ -93,6 +101,8 @@ class NanoLEDPlugin(
             return flask.jsonify(ok=self.flicker_rainbow())
         if command == "flash_white":
             return flask.jsonify(ok=self.flash_white())
+        if command == "next_pattern":
+            return flask.jsonify(ok=self.next_pattern())
         return flask.jsonify(ok=False, message="Unknown command")
 
 
@@ -115,4 +125,5 @@ def __plugin_load__():
         set_solid=plugin.set_solid,
         flicker_rainbow=plugin.flicker_rainbow,
         flash_white=plugin.flash_white,
+        next_pattern=plugin.next_pattern,
     )
