@@ -1,0 +1,32 @@
+<form class="form-horizontal">
+    <p class="help-block">
+        {{ _('See this plugin\'s README for the full Google Actions Console / tunnel / Google Home Routine setup. The fields below just need to match whatever you configure there.') }}
+    </p>
+    <div class="control-group">
+        <label class="control-label">{{ _('Device name') }}</label>
+        <div class="controls">
+            <input type="text" class="input-medium" data-bind="value: settings.settings.plugins.googlehome.device_name">
+            <span class="help-block">{{ _('What you\'ll call it by voice, e.g. "Hey Google, what mode is [this] in".') }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('OAuth client id') }}</label>
+        <div class="controls">
+            <input type="text" class="input-block-level" data-bind="value: settings.settings.plugins.googlehome.client_id">
+            <span class="help-block">{{ _('From the Actions Console project\'s account linking settings.') }}</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('OAuth client secret') }}</label>
+        <div class="controls">
+            <input type="password" class="input-block-level" data-bind="value: settings.settings.plugins.googlehome.client_secret">
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label">{{ _('Static access token') }}</label>
+        <div class="controls">
+            <input type="password" class="input-block-level" data-bind="value: settings.settings.plugins.googlehome.static_token">
+            <span class="help-block">{{ _('A long random string you generate yourself -- issued as the OAuth token for every grant, since this is single-household (no real per-user accounts).') }}</span>
+        </div>
+    </div>
+</form>
