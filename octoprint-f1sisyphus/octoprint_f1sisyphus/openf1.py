@@ -5,10 +5,21 @@ lookup). Pure aside from `requests` -- no OctoPrint imports -- so it is
 unit-testable with a FakeRequests fixture, mirroring plug.py/test_plug.py.
 """
 
+import time
+
 import requests
 
 DEFAULT_API_BASE = "https://api.openf1.org/v1"
 DEFAULT_TIMEOUT = 15
+
+# The /location endpoint (used by circuit.py to fetch a whole historical
+# session's worth of car position data) has been observed to 429 for several
+# minutes at a time -- longer than the ~30 req/min the docs advertise for
+# lightweight queries. A handful of short retries turns a single transient
+# 429 into a success without making callers orchestrate their own backoff;
+# callers that still exhaust retries get the same OpenF1Error as before.
+RATE_LIMIT_MAX_RETRIES = 3
+RATE_LIMIT_BACKOFF_SECONDS = (2, 5, 10)
 
 
 class OpenF1Error(Exception):
@@ -22,15 +33,25 @@ class OpenF1Client(object):
 
     def _get(self, path, params=None):
         url = "{}/{}".format(self.api_base, path)
-        try:
-            resp = requests.get(url, params=params, timeout=self.timeout)
-            resp.raise_for_status()
-        except requests.RequestException as exc:
-            raise OpenF1Error("GET {} failed: {}".format(url, exc))
-        try:
-            return resp.json()
-        except ValueError as exc:
-            raise OpenF1Error("GET {} returned invalid JSON: {}".format(url, exc))
+        attempt = 0
+        while True:
+            try:
+                resp = requests.get(url, params=params, timeout=self.timeout)
+                resp.raise_for_status()
+            except requests.RequestException as exc:
+                status = getattr(exc.response, "status_code", None)
+                if status == 429 and attempt < RATE_LIMIT_MAX_RETRIES:
+                    delay = _retry_after_seconds(exc.response) or RATE_LIMIT_BACKOFF_SECONDS[
+                        min(attempt, len(RATE_LIMIT_BACKOFF_SECONDS) - 1)
+                    ]
+                    time.sleep(delay)
+                    attempt += 1
+                    continue
+                raise OpenF1Error("GET {} failed: {}".format(url, exc))
+            try:
+                return resp.json()
+            except ValueError as exc:
+                raise OpenF1Error("GET {} returned invalid JSON: {}".format(url, exc))
 
     def get_sessions(self, **params):
         return self._get("sessions", params=params)
@@ -67,6 +88,21 @@ class OpenF1Client(object):
         if not candidates:
             return None
         return max(candidates, key=_session_date)
+
+
+def _retry_after_seconds(response):
+    """Honor the server's own Retry-After header when present (RFC 7231
+    integer-seconds form); OpenF1 doesn't document sending one today, but
+    respecting it if it ever appears beats guessing at a fixed backoff."""
+    if response is None:
+        return None
+    value = response.headers.get("Retry-After")
+    if not value:
+        return None
+    try:
+        return max(0, int(value))
+    except ValueError:
+        return None
 
 
 def _session_date(session):
