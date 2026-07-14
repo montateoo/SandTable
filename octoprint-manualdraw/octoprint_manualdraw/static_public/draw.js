@@ -22,6 +22,7 @@
     var baselineCount = 0;
     var sessionSecret = null; // identifies our session so another phone with the same QR can't jog/stop it
     var state = "idle"; // idle | holding | active | expired
+    var jogInFlight = false; // true while a jog POST is awaiting its response
 
     function setStatus(text, cls) {
         statusEl.textContent = text;
@@ -150,13 +151,26 @@
         if (!latestOrientation || baselineCount < BASELINE_SAMPLES) {
             return; // still calibrating the baseline
         }
+        if (jogInFlight) {
+            // A previous jog hasn't come back yet -- skip this tick instead of
+            // piling another request on top. Queueing here is what causes a
+            // progressively growing lag: each queued request executes a stale
+            // tilt reading later and later. Dropping the tick keeps the ball
+            // moving on the most recent orientation as soon as the table is
+            // actually free, instead of replaying a backlog of old deltas.
+            return;
+        }
         var dbeta = latestOrientation.beta - baseline.beta;
         var dgamma = latestOrientation.gamma - baseline.gamma;
+        jogInFlight = true;
         post("api/jog", { dbeta: dbeta, dgamma: dgamma }).then(function (res) {
+            jogInFlight = false;
             if (res.status === 403 || res.status === 409) {
                 goExpired(res.data && res.data.message);
             }
-        }).catch(function () { /* transient network hiccup, next tick retries */ });
+        }).catch(function () {
+            jogInFlight = false; // transient network hiccup, next tick retries
+        });
     }
 
     function activate() {
@@ -185,6 +199,7 @@
     function stopEverything(sendStop) {
         if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
         if (jogTimer) { clearInterval(jogTimer); jogTimer = null; }
+        jogInFlight = false;
         stopOrientationListener();
         resetRing(false);
         btn.classList.remove("locked");
