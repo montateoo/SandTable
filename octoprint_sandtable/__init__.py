@@ -46,6 +46,9 @@ class SandTablePlugin(
         self._last_error = None
         self._autostart_inflight = False
         self._pausing = False
+        self._recover_attempts = 0
+        self._stop_complete = threading.Event()
+        self._stop_complete.set()  # nothing in-flight until a skip clears it
 
     # --------------------------------------------------------------- settings
     def get_settings_defaults(self):
@@ -62,10 +65,11 @@ class SandTablePlugin(
             "off_delay_seconds": 60,     # plug stays on this long so the Pi can halt
             "shutdown_pi": True,         # clean OS shutdown before power is cut
             "startup_delay_seconds": 30,
-            "post_draw_pause_seconds": 0,  # wait this long after each draw before eraser/power-off
+            "post_draw_pause_seconds": 300,  # wait this long after each draw before eraser/power-off
             "program_wake": False,       # future: program the plug's wake timer
             "wake_mode": "after_hours",
             "wake_value": "8",
+            "auto_recover": True,        # reconnect + retry after a communication death
             "dry_run": True,             # SAFE DEFAULT: never actually power off/shut down
             "eraser_index": 0,           # persisted round-robin pointers
             "draw_index": 0,
@@ -123,6 +127,7 @@ class SandTablePlugin(
             self._current_path = None
             self._skip = False
             self._last_error = None
+            self._recover_attempts = 0
             self._running = True
 
         action, phase, rnd = cycle.START
@@ -142,7 +147,10 @@ class SandTablePlugin(
             self._current_path = None
             self._skip = False
         if self._printer.is_printing():
+            self._printer.commands("!", force=True)
             self._printer.cancel_print()
+            self._wait_until_not_printing(timeout=10)
+            self._immediate_stop()
         self._logger.info("SandTable: cycle stopped by request")
         return was_running
 
@@ -158,23 +166,100 @@ class SandTablePlugin(
             if not self._printer.is_printing():
                 return False, "Nothing is printing to skip"
             self._skip = True
-            self._printer.cancel_print()
-            return True, "Skipping current pattern"
+            self._stop_complete.clear()
+        self._printer.commands("!", force=True)  # best-effort immediate feed-hold request
+        self._printer.cancel_print()
+        # OctoPrint's serial writer serializes ALL sends (including force=True
+        # ones) through one lock shared with the active file-streamer -- so
+        # our commands don't actually jump the queue, they just wait their
+        # turn behind whatever the streamer is still pushing until
+        # cancel_print() genuinely stops it. Confirmed empirically: our '!'
+        # and '\x18' showed up in serial.log milliseconds apart despite a
+        # 3s Python-level sleep between them, because both calls sat queued
+        # behind the same backlog and only got serviced once that cleared --
+        # the sleep elapsed while blocked, not while GRBL was decelerating.
+        # Wait for is_printing() to actually go False before doing anything
+        # timing-sensitive, so the channel is genuinely free and our sleep
+        # in _immediate_stop() means what it says.
+        self._wait_until_not_printing(timeout=10)
+        self._immediate_stop()
+        self._stop_complete.set()
+        return True, "Skipping current pattern"
+
+    def _wait_until_not_printing(self, timeout):
+        deadline = time.time() + timeout
+        while time.time() < deadline and self._printer.is_printing():
+            time.sleep(0.1)
+
+    def _immediate_stop(self):
+        """Reset GRBL to a clean Idle state after skip_current() has already
+        sent '!' (feed hold) and confirmed via is_printing()==False that
+        OctoPrint's file-streamer has genuinely stopped competing for the
+        serial channel (see the comment there for why that confirmation
+        matters -- force=True does not give realtime commands priority over
+        an active stream; they share the same send lock).
+
+        With the channel now free, this sleep is real physical settle time,
+        not queueing delay: the fastest feedrate anything in this codebase
+        uses is 6000 mm/min (100 mm/s, manualdraw's jog_feedrate) and GRBL's
+        configured acceleration is 50 mm/s^2 ($120/$121), so worst-case
+        stop-from-full-speed takes 100/50 = 2.0s; 3.0s leaves a full second
+        of margin. Soft-resetting GRBL while it's still physically
+        decelerating trips Grbl ALARM:3 ("Reset while in motion ... lost
+        steps are likely"), which then makes GRBL reject every G-code line
+        the streamer sends with "error:9 G-code lock" until unlocked --
+        that's the failure mode this wait exists to avoid.
+
+        '\\x18' (soft reset) cleanly drops GRBL back to Idle. It also wipes
+        GRBL's modal feedrate: most of our gcode files never set their own F
+        (they've always relied on whatever F was left over from the previous
+        job -- true for every job until this reset existed), so '$X'
+        (unlock -- harmless no-op if no alarm was raised) is followed by an
+        explicit 'G1 F2000' to re-arm a safe default. Without it, the next
+        file printed would have every line rejected with "error:22 Undefined
+        feed rate": nothing moves, which looks exactly like a crash but isn't
+        one.
+        """
+        try:
+            time.sleep(3.0)
+            self._printer.commands("\x18", force=True)
+            time.sleep(0.5)
+            self._printer.commands("$X", force=True)
+            time.sleep(0.2)
+            self._printer.commands("G1 F2000", force=True)
+        except Exception:
+            self._logger.exception("SandTable: immediate stop failed")
 
     # --------------------------------------------------------- event handlers
-    def _handle_print_done(self, payload):
+    def _handle_print_done(self, payload, skip_pause=False):
         with self._lock:
             if not self._running:
                 return
             if not self._is_our_print(payload):
                 self._logger.debug("SandTable: ignoring PrintDone for a non-managed file")
                 return
+            self._recover_attempts = 0  # a completed print clears the recovery counter
             action, next_phase, next_round = cycle.advance(self._phase, self._round, self._rounds)
             self._round = next_round
             self._phase = next_phase
 
-        # After a draw, pause before the next eraser or the final power-off.
-        if action in (cycle.ACTION_PRINT_ERASER, cycle.ACTION_COMPLETE):
+        if skip_pause:
+            # This event is delivered on OctoPrint's event-worker thread,
+            # concurrently with skip_current()'s own thread still running
+            # cancel_print() + _immediate_stop() (feed-hold, wait for the
+            # ball to physically stop, soft-reset, unlock, restore feedrate).
+            # Without waiting here, we've on occasion gotten far enough to
+            # select and start the *next* file while that reset was still
+            # in-flight -- the new file's G1 lines arrive while GRBL is mid-
+            # reset/alarm and every one bounces off with "error:9 G-code
+            # lock". Block until the other thread signals it's genuinely
+            # done before touching the printer again.
+            self._stop_complete.wait(timeout=10)
+        elif action in (cycle.ACTION_PRINT_ERASER, cycle.ACTION_COMPLETE):
+            # After a draw, pause before the next eraser or the final power-
+            # off -- but only for a *naturally finished* drawing. A manual
+            # skip already means the user wants the table to move on now,
+            # not sit idle for post_draw_pause_seconds.
             pause = self._settings.get_int(["post_draw_pause_seconds"]) or 0
             self._pause_between(pause)
             with self._lock:
@@ -213,11 +298,67 @@ class SandTablePlugin(
         if not running:
             return
         if skipping:
-            # We cancelled on purpose to skip the current pattern -> advance.
-            self._handle_print_done(payload)
+            # We cancelled on purpose to skip the current pattern -> advance
+            # immediately, bypassing the post-draw pause (that pause is for
+            # letting a *naturally finished* drawing sit before the eraser
+            # wipes it -- a manual skip means the user wants to move on now).
+            self._handle_print_done(payload, skip_pause=True)
             return
         reason = (payload or {}).get("reason", "")
-        self._stop_with_error("print {} {}".format(event, reason).strip())
+        label = "print {} {}".format(event, reason).strip()
+        if event == Events.PRINT_CANCELLED or reason == "cancelled":
+            # Deliberate cancel from the UI (not a malfunction) -> respect it.
+            self._stop_with_error(label)
+            return
+        if not self._settings.get_boolean(["auto_recover"]):
+            self._stop_with_error(label)
+            return
+        self._attempt_recovery(label)
+
+    def _attempt_recovery(self, reason):
+        """Self-heal after a communication death (GRBL freeze -> 'Offline after
+        error'). Reconnecting reopens the serial port, which auto-resets the
+        controller and unfreezes it; then the failed file is restarted. Gives
+        up after 3 consecutive failures of the same file so a persistent
+        hardware fault still surfaces instead of retrying forever."""
+        with self._lock:
+            if not self._running:
+                return
+            self._recover_attempts += 1
+            attempt = self._recover_attempts
+            path = self._current_path
+        if attempt > 3:
+            self._stop_with_error("giving up after 3 recovery attempts: {}".format(reason))
+            return
+        self._logger.warning(
+            "SandTable: %s -- recovery attempt %d/3, reconnecting to reset the controller",
+            reason, attempt,
+        )
+        try:
+            self._printer.disconnect()
+        except Exception:
+            pass
+        time.sleep(5)
+        try:
+            self._printer.connect()
+        except Exception:
+            self._logger.exception("SandTable: reconnect failed during recovery")
+        if not self._wait_ready(timeout=120):
+            self._stop_with_error(
+                "printer did not come back after recovery reconnect ({})".format(reason)
+            )
+            return
+        with self._lock:
+            if not self._running:
+                return
+        if path is None:
+            self._stop_with_error("recovery aborted: no file to restart")
+            return
+        try:
+            self._logger.info("SandTable: recovered, restarting %s", path)
+            self._print_file(path)
+        except (CycleError, ValueError, PlugError) as exc:
+            self._stop_with_error(str(exc))
 
     # ----------------------------------------------------------- cycle engine
     def _do_action(self, action):
@@ -359,17 +500,35 @@ class SandTablePlugin(
             self._skip = False  # consume skip so the next print starts clean
             self._pausing = False
 
-    def _wait_ready(self, timeout=90):
+    def _wait_ready(self, timeout=90, _idle_stable_secs=2.0):
+        """Wait until the printer is operational and GRBL's planner is empty.
+
+        OctoPrint reports 'Operational' (is_operational()==True) when GRBL
+        sends an <Idle> status response -- but a single <Idle> can be a brief
+        transient while the planner drains the last segment. We require the
+        printer to hold the Operational state continuously for _idle_stable_secs
+        before starting the next file, which in practice means GRBL's motion
+        buffer is truly empty and the first G1 command won't time out.
+        """
         deadline = time.time() + timeout
         reconnect_at = time.time() + 20
         reconnected = False
+        idle_since = None
+
         while time.time() < deadline:
-            if (
+            is_ready = (
                 self._printer.is_operational()
                 and not self._printer.is_printing()
                 and not self._printer.is_paused()
-            ):
-                return True
+            )
+            if is_ready:
+                if idle_since is None:
+                    idle_since = time.time()
+                elif time.time() - idle_since >= _idle_stable_secs:
+                    return True  # GRBL held Idle for _idle_stable_secs → buffer empty
+            else:
+                idle_since = None  # dropped out of Idle — reset the stability timer
+
             # If the printer is stuck (e.g. OctoPrint in "Finishing" because
             # GRBL stopped responding at end-of-job), one reconnect resets it.
             if not reconnected and time.time() >= reconnect_at:
